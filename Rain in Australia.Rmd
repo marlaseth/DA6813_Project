@@ -1,0 +1,1078 @@
+---
+title: "Rain in Australia"
+author: "Marla Seth"
+date: "10/3/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+
+
+
+*****************************************************************************
+#Loading Data Set
+*****************************************************************************
+
+```{r}
+setwd("~/UTSA/DA 6813 Data Analytics Applications/Case Studies/DA6813/6 Rain in Australia")
+raindata <- read.csv("weatherAUS.csv", header = TRUE)
+```
+
+
+
+
+
+********************************************************************************
+#Data Exploration
+*******************************************************************************
+
+```{r}
+str(raindata)
+```
+
+```{r}
+summary(raindata)
+```
+
+
+
+```{r}
+anyNA(raindata)
+```
+```{r}
+raindata%>%
+  select(everything()) %>% 
+  summarise_all(funs(sum(is.na(.))))
+```
+
+```{r}
+
+#comparing nulls by location
+
+raindata%>%
+  group_by(Location) %>% 
+  select(everything()) %>% 
+  summarise_all(funs(sum(is.na(.)))) %>%
+  ungroup()
+```
+
+
+```{r}
+#comparing min temp and 9am temp nulls
+mins = ifelse (is.na(raindata$MinTemp) & is.na(raindata$Temp9am), 1, 0 )
+sum(mins)
+
+#comparing max temp and 3pm temp nulls
+max = ifelse (is.na(raindata$MaxTemp) & is.na(raindata$Temp3pm), 1, 0 )
+sum(max)
+
+#comparing overlap of nulls between mins/max
+notemp = ifelse (mins == 1 & max == 1, 1, 0)
+sum(notemp)
+
+#comparing pressure 9am and pressure 3pm nulls
+pressure = ifelse (is.na(raindata$Pressure9am) & is.na(raindata$Pressure3pm), 1, 0 )
+sum(pressure)
+```
+
+
+```{r}
+#checking for duplicate data
+anyDuplicated(raindata)
+```
+
+
+```{r}
+unique(raindata$Location)
+```
+```{r}
+unique(raindata$WindGustDir)
+```
+
+```{r}
+unique(raindata$WindDir3pm)
+
+```
+
+```{r}
+unique(raindata$WindDir9am)
+```
+```{r}
+corrs = subset(raindata, select = -c(Date,Location,WindGustDir,WindDir3pm,WindDir9am,RainToday,RainTomorrow)) 
+corr=cor(corrs, use = "complete.obs")
+round(corr,2)
+
+```
+
+```{r}
+
+library(corrplot)
+
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+
+corrplot(corr, type="lower", order="hclust", tl.col="black", tl.srt=45,title = "Variable Correlations", method = "color", col=col(200), addCoef.col = "black", number.cex= 8/ncol(corrs),mar=c(0,0,2,0))
+```
+
+```{r}
+
+#Check Distribution of our target
+prop.table(table(as.factor(raindata$RainTomorrow)))
+
+```
+
+```{r}
+count(raindata, RainTomorrow == "Yes")
+```
+
+```{r}
+raindata$RainTomorrow = as.factor(raindata$RainTomorrow)
+raindata$Location = as.factor(raindata$Location)
+raindata$WindGustDir = as.factor(raindata$WindGustDir)
+raindata$WindDir9am = as.factor(raindata$WindDir9am)
+raindata$WindDir3pm = as.factor(raindata$WindDir3pm)
+raindata$RainToday = as.factor(raindata$RainToday)
+```
+
+
+```{r}
+rain_no_nulls = na.omit(raindata)
+summary(rain_no_nulls)
+```
+```{r}
+rain <- raindata[!is.na(raindata$RainTomorrow),]
+str(rain)
+```
+```{r}
+ggplot(data = rain, mapping = aes (x = RainTomorrow, y = MinTemp, fill = RainTomorrow)) +
+  geom_boxplot(color = "black", alpha = 0.95) + 
+  labs (title = "Minimum Temperature", 
+          x = "Rain the Following Day", 
+          y = "MinTemp") +
+  scale_fill_manual (values = c("steelblue","burlywood2" ))+
+  theme_minimal()+
+  theme(legend.position = "none")
+```
+
+```{r}
+ggplot(data = rain, mapping = aes (x = RainTomorrow, y = MaxTemp, fill = RainTomorrow)) +
+  geom_boxplot(color = "black", alpha = 0.95) + 
+  labs (title = "Maximum Temperature", 
+          x = "Rain the Following Day", 
+          y = "MaxTemp") +
+  scale_fill_manual (values = c("steelblue","burlywood2" ))+
+  theme_minimal()+
+  theme(legend.position = "none")
+```
+```{r}
+ggplot(data = rain, mapping = aes (x = RainTomorrow, y = Rainfall, fill = RainTomorrow)) +
+  geom_boxplot(color = "black", alpha = 0.95) + 
+  labs (title = "Rainfall Today", 
+          x = "Rain the Following Day", 
+          y = "Rainfall") +
+  scale_fill_manual (values = c("steelblue","burlywood2" ))+
+  theme_minimal()+
+  theme(legend.position = "none")
+```
+
+```{r}
+ggplot(data = rain, mapping = aes (x = RainTomorrow, y = Evaporation, fill = RainTomorrow)) +
+  geom_boxplot(color = "black", alpha = 0.95) + 
+  labs (title = "Evaporation", 
+          x = "Rain the Following Day", 
+          y = "Evaporation") +
+  scale_fill_manual (values = c("steelblue","burlywood2" ))+
+  theme_minimal()+
+  theme(legend.position = "none")
+```
+
+```{r}
+ggplot(data = rain, mapping = aes (x = RainTomorrow, y = Sunshine, fill = RainTomorrow)) +
+  geom_boxplot(color = "black", alpha = 0.95) + 
+  labs (title = "Sunshine", 
+          x = "Rain the Following Day", 
+          y = "Sunshine") +
+  scale_fill_manual (values = c("steelblue","burlywood2" ))+
+  theme_minimal()+
+  theme(legend.position = "none")
+```
+
+```{r}
+ggplot(data = rain, mapping = aes (x = RainTomorrow, y = WindGustSpeed, fill = RainTomorrow)) +
+  geom_boxplot(color = "black", alpha = 0.95) + 
+  labs (title = "Wind Gust Speed", 
+          x = "Rain the following day", 
+          y = "Wind Gust Speed") +
+  scale_fill_manual (values = c("steelblue","burlywood2" ))+
+  theme_minimal()+
+  theme(legend.position = "none")
+```
+
+```{r}
+ggplot(data = rain, mapping = aes (x = RainTomorrow, y = WindSpeed9am, fill = RainTomorrow)) +
+  geom_boxplot(color = "black", alpha = 0.95) + 
+  labs (title = "Wind Speed 9am", 
+          x = "Rain the following day", 
+          y = "Wind Speed 9am") +
+  scale_fill_manual (values = c("steelblue","burlywood2" ))+
+  theme_minimal()+
+  theme(legend.position = "none")
+```
+
+```{r}
+ggplot(data = rain, mapping = aes (x = RainTomorrow, y = WindSpeed3pm, fill = RainTomorrow)) +
+  geom_boxplot(color = "black", alpha = 0.95) + 
+  labs (title = "Wind Speed 3pm", 
+          x = "Rain the following day", 
+          y = "Wind Speed 3pm") +
+  scale_fill_manual (values = c("steelblue","burlywood2" ))+
+  theme_minimal()+
+  theme(legend.position = "none")
+```
+
+```{r}
+ggplot(data = rain, mapping = aes (x = RainTomorrow, y = Humidity9am, fill = RainTomorrow)) +
+  geom_boxplot(color = "black", alpha = 0.95) + 
+  labs (title = "Humidity 9am", 
+          x = "Rain the following day", 
+          y = "Humidity 9am") +
+  scale_fill_manual (values = c("steelblue","burlywood2" ))+
+  theme_minimal()+
+  theme(legend.position = "none")
+```
+
+```{r}
+ggplot(data = rain, mapping = aes (x = RainTomorrow, y = Humidity3pm, fill = RainTomorrow)) +
+  geom_boxplot(color = "black", alpha = 0.95) + 
+  labs (title = "Humidity 3pm", 
+          x = "Rain the following day", 
+          y = "Humidity 3pm") +
+  scale_fill_manual (values = c("steelblue","burlywood2" ))+
+  theme_minimal()+
+  theme(legend.position = "none")
+```
+
+```{r}
+ggplot(data = rain, mapping = aes (x = RainTomorrow, y = Pressure9am, fill = RainTomorrow)) +
+  geom_boxplot(color = "black", alpha = 0.95) + 
+  labs (title = "Pressure 9am", 
+          x = "Rain the following day", 
+          y = "Pressure 9am") +
+  scale_fill_manual (values = c("steelblue","burlywood2" ))+
+  theme_minimal()+
+  theme(legend.position = "none")
+```
+
+```{r}
+ggplot(data = rain, mapping = aes (x = RainTomorrow, y = Pressure3pm, fill = RainTomorrow)) +
+  geom_boxplot(color = "black", alpha = 0.95) + 
+  labs (title = "Pressure 3pm", 
+          x = "Rain the following day", 
+          y = "Pressure 3pm") +
+  scale_fill_manual (values = c("steelblue","burlywood2" ))+
+  theme_minimal()+
+  theme(legend.position = "none")
+```
+```{r}
+ggplot(data = rain, mapping = aes (x = RainTomorrow, y = Cloud9am, fill = RainTomorrow)) +
+  geom_boxplot(color = "black", alpha = 0.95) + 
+  labs (title = "Cloud 9am", 
+          x = "Rain the following day", 
+          y = "Cloud 9am") +
+  scale_fill_manual (values = c("steelblue","burlywood2" ))+
+  theme_minimal()+
+  theme(legend.position = "none")
+```
+
+```{r}
+ggplot(data = rain, mapping = aes (x = RainTomorrow, y = Cloud3pm, fill = RainTomorrow)) +
+  geom_boxplot(color = "black", alpha = 0.95) + 
+  labs (title = "Cloud 3pm", 
+          x = "Rain the following day", 
+          y = "Cloud 3pm") +
+  scale_fill_manual (values = c("steelblue","burlywood2" ))+
+  theme_minimal()+
+  theme(legend.position = "none")
+```
+
+```{r}
+ggplot(data = rain, mapping = aes (x = RainTomorrow, y = Temp9am, fill = RainTomorrow)) +
+  geom_boxplot(color = "black", alpha = 0.95) + 
+  labs (title = "Temperature 9am", 
+          x = "Rain the following day", 
+          y = "Temperature 9am") +
+  scale_fill_manual (values = c("steelblue","burlywood2" ))+
+  theme_minimal()+
+  theme(legend.position = "none")
+```
+
+```{r}
+ggplot(data = rain, mapping = aes (x = RainTomorrow, y = Temp3pm, fill = RainTomorrow)) +
+  geom_boxplot(color = "black", alpha = 0.95) + 
+  labs (title = "Temperature 3pm", 
+          x = "Rain the following day", 
+          y = "Temperature 3pm") +
+  scale_fill_manual (values = c("steelblue","burlywood2" ))+
+  theme_minimal()+
+  theme(legend.position = "none")
+```
+
+```{r}
+#deleting unusable variables and converting RainToday and RainTomorrow into 0s and 1s
+rain2 = select(rain, -c(Date, Sunshine, Evaporation, Cloud3pm, Cloud9am, Pressure9am, Pressure3pm, WindGustDir, WindGustSpeed, WindDir9am))
+#rain2$RainToday = ifelse(rain2$RainToday == "Yes", 1, 0)
+#rain2$RainTomorrow = ifelse(rain2$RainTomorrow == "Yes", 1, 0)
+
+str(rain2)
+```
+```{r}
+
+rain2%>%
+  select(everything()) %>% 
+  summarise_all(funs(sum(is.na(.))))
+```
+```{r}
+#Imputing missing temperature values
+
+for (i in 1:nrow(rain2)){
+  if (is.na(rain2$MinTemp[i])) {
+    rain2$MinTemp[i] = rain2$Temp9am[i] - mean(rain2$Temp9am - rain2$MinTemp, na.rm = T)}
+  if (is.na(rain2$Temp9am[i])) {
+    rain2$Temp9am[i] = rain2$MinTemp[i] - mean(rain2$MinTemp - rain2$Temp9am, na.rm = T)}
+  if (is.na(rain2$MaxTemp[i])) {
+    rain2$MaxTemp[i] = rain2$Temp3pm[i] - mean(rain2$Temp3pm - rain2$MaxTemp, na.rm = T)}
+  if (is.na(rain2$Temp3pm[i])) {
+    rain2$Temp3pm[i] = rain2$MaxTemp[i] - mean(rain2$MaxTemp - rain2$Temp3pm, na.rm = T)}
+}
+```
+
+```{r}
+
+rain2%>%
+  select(everything()) %>% 
+  summarise_all(funs(sum(is.na(.))))
+```
+
+
+
+```{r}
+#deleting remaining nulls
+rain3 <- na.omit(rain2)
+```
+
+```{r}
+#a little feature engineering
+feat <- rain3
+feat$tempchange = rain3$Temp3pm - rain3$Temp9am
+feat$humchange = rain3$Humidity3pm - rain3$Humidity9am
+str(feat)
+```
+
+```{r}
+summary(feat)
+```
+
+
+
+
+
+****************************************************************************
+#Inferential Testing
+****************************************************************************
+
+
+
+```{r}
+#chi-square inferential on categorical variables
+wind.chi <- chisq.test(table(rain3$WindDir3pm, rain3$RainTomorrow))
+wind.chi
+rain.chi <- chisq.test(table(rain3$RainToday, rain3$RainTomorrow))
+rain.chi
+location.chi <- chisq.test(table(rain3$Location, rain3$RainTomorrow))
+location.chi
+```
+```{r}
+#chi-square inferential on unusable categorical variables
+gust.chi <- chisq.test(table(rain_no_nulls$WindGustDir, rain_no_nulls$RainTomorrow))
+gust.chi
+dir3 <- chisq.test(table(rain_no_nulls$WindDir3pm, rain_no_nulls$RainTomorrow))
+rain.chi
+dir9<- chisq.test(table(rain_no_nulls$WindDir9am, rain_no_nulls$RainTomorrow))
+dir9
+
+```
+
+```{r}
+#using logistic regression for inferential tests on numerical variables
+
+
+infer_names = c("MinTemp", "MaxTemp", "Rainfall", "WindSpeed9am", "WindSpeed3pm", "Humidity9am", "Humidity3pm", "Temp9am", "Temp3pm", "tempchange", "humchange", "RainTomorrow")
+infer = select(feat, c(MinTemp, MaxTemp, Rainfall, WindSpeed9am, WindSpeed3pm, Humidity9am, Humidity3pm, Temp9am, Temp3pm, tempchange, humchange, RainTomorrow))
+
+for (i in 1:11){
+  infer1 <- glm(RainTomorrow ~ infer[,i], data = infer, family = 'binomial')
+  print(infer_names[i])
+  print(summary(infer1))
+  }
+
+```
+```{r}
+#using logistic regression for inferential tests on deleted numerical variables
+
+
+infer_names2 = c("Evaporation", "Sunshine", "WindGustSpeed", "WindSpeed9am", "WindSpeed3pm", "Pressure9am", "Pressure3pm", "Cloud9am", "Cloud3pm", "RainTomorrow")
+infer2 = select(rain_no_nulls, c(Evaporation, Sunshine, WindGustSpeed, WindSpeed9am, WindSpeed3pm, Pressure9am, Pressure3pm, Cloud9am, Cloud3pm, RainTomorrow))
+
+for (i in 1:9){
+  infer3 <- glm(RainTomorrow ~ infer2[,i], data = infer2, family = 'binomial')
+  print(infer_names2[i])
+  print(summary(infer3))
+  }
+
+```
+
+
+
+
+
+****************************************************************************************
+#Train and Test
+****************************************************************************************
+
+```{r}
+#splitting into training and testing
+
+set.seed(90821)
+tr_index = sample (nrow(feat), 0.7*nrow(feat), replace = F)
+train1 = rain3[tr_index,]
+test1 = rain3[-tr_index,]
+train2 = feat[tr_index,]
+test2 = feat[-tr_index,]
+
+dim(train1); dim(train2); dim(test1); dim(test2)
+
+```
+
+
+
+
+
+******************************************************************************************
+#Logistic Regression Models
+******************************************************************************************
+
+
+```{r}
+#running full glm model (using numeric current day rain values to check VIF values)
+log1 <- glm(RainTomorrow ~ .- RainToday, data = train1, family = 'binomial')
+summary(log1)
+```
+```{r}
+library(car)
+vif(log1)
+```
+
+```{r}
+#deleting biggest VIF value
+log2 <- glm(RainTomorrow ~ .- RainToday - Temp3pm, data = train1, family = 'binomial')
+summary(log2)
+```
+```{r}
+vif(log2)
+```
+
+```{r}
+#deleting next biggest VIF value
+log3 <- glm(RainTomorrow ~ .- RainToday - Temp3pm - Temp9am, data = train1, family = 'binomial')
+summary(log3)
+```
+```{r}
+vif(log3)
+```
+```{r}
+#checking diagnostic plots
+par(mfrow = c(2,2))
+plot(log3, which = c(1,2,4,5))
+```
+```{r}
+library(ResourceSelection)
+hoslem.test(log3$y, fitted(log3), g=10)
+```
+
+
+```{r}
+#predicting on first logistic model without multicollinearity issues
+resp3 = predict(log3, newdata = test1, type = 'response')
+pred3= ifelse(resp3 >= 0.5, "Yes","No")
+
+library(caret)
+confusionMatrix(as.factor(pred3), test1$RainTomorrow)
+```
+```{r}
+#backwards selection - removing least significant variable - humidity at 9am
+
+log4 <- glm(RainTomorrow ~ .- RainToday - Temp3pm - Temp9am - Humidity9am, data = train1, family = 'binomial')
+summary(log4)
+```
+```{r}
+log4$coefficients
+```
+
+
+```{r}
+exp(log4$coefficients)
+```
+
+
+
+```{r}
+#checking diagnostic plots
+par(mfrow = c(2,2))
+plot(log4, which = c(1,2,4,5))
+```
+```{r}
+hoslem.test(log4$y, fitted(log4), g=10)
+```
+```{r}
+#predicting
+resp4 = predict(log4, newdata = test1, type = 'response')
+pred4= ifelse(resp4 >= 0.5, "Yes","No")
+
+confusionMatrix(as.factor(pred4), test1$RainTomorrow)
+```
+
+```{r}
+#backwards selection - removing least significant variable - MaxTemp
+
+log5 <- glm(RainTomorrow ~ .- RainToday - Temp3pm - Temp9am - Humidity9am - MaxTemp, data = train1, family = 'binomial')
+summary(log5)
+```
+```{r}
+#checking diagnostic plots
+par(mfrow = c(2,2))
+plot(log5, which = c(1,2,4,5))
+```
+```{r}
+hoslem.test(log5$y, fitted(log5), g=10)
+```
+
+```{r}
+#predicting
+resp5 = predict(log5, newdata = test1, type = 'response')
+pred5= ifelse(resp5 >= 0.5, "Yes","No")
+
+confusionMatrix(as.factor(pred5), test1$RainTomorrow)
+```
+
+```{r}
+#additional model - removing Wind Direction because some values were not significant
+
+log6 <- glm(RainTomorrow ~ Location + MinTemp + Rainfall + WindSpeed9am + WindSpeed3pm + Humidity3pm, data = train1, family = 'binomial')
+summary(log6)
+```
+```{r}
+#checking diagnostic plots
+par(mfrow = c(2,2))
+plot(log6, which = c(1,2,4,5))
+```
+
+
+```{r}
+hoslem.test(log6$y, fitted(log6), g=10)
+```
+```{r}
+#predicting
+resp6 = predict(log6, newdata = test1, type = 'response')
+pred6= ifelse(resp6 >= 0.5, "Yes","No")
+
+confusionMatrix(as.factor(pred6), test1$RainTomorrow)
+```
+
+```{r}
+#trying model with feature engineering - running full model (without original temperature or humidity values)
+
+log7 <- glm(RainTomorrow ~ Location + Rainfall + WindDir3pm + WindSpeed9am + WindSpeed3pm + tempchange + humchange, data = train2, family = 'binomial')
+summary(log7)
+```
+
+```{r}
+vif(log7)
+```
+
+```{r}
+#checking diagnostic plots
+par(mfrow = c(2,2))
+plot(log7, which = c(1,2,4,5))
+```
+
+```{r}
+hoslem.test(log7$y, fitted(log7), g=10)
+```
+
+```{r}
+resp7 = predict(log6, newdata = test2, type = 'response')
+pred7= ifelse(resp7 >= 0.5, "Yes","No")
+
+confusionMatrix(as.factor(pred7), test2$RainTomorrow)
+```
+
+```{r}
+# ROC and AUC on best glm model 
+
+library(ROCR)
+pred_n <- prediction(predict(log4, test1, type = "response"),test1$RainTomorrow)
+
+auc_n <- round(as.numeric(performance(pred_n, measure = "auc")@y.values),3)
+
+auc_n
+```
+
+```{r}
+perf_n <- performance(pred_n, "tpr","fpr")
+plot(perf_n,colorize = T, main = "ROC Curve")
+text(0.5,0.5, paste("AUC:", auc_n))
+```
+
+```{r}
+# computing threshold for cutoff to best trade off sensitivity and specificity - undersampled data
+#first sensitivity
+plot(unlist(performance(pred_n, "sens")@x.values), unlist(performance(pred_n, "sens")@y.values), 
+     type="l", lwd=2, 
+     ylab="Sensitivity", xlab="Cutoff", main = paste("Maximized Cutoff\n","AUC: ",auc_n))
+
+par(new=TRUE) # plot another line in same plot
+
+#second specificity
+plot(unlist(performance(pred_n, "spec")@x.values), unlist(performance(pred_n, "spec")@y.values), 
+     type="l", lwd=2, col='red', ylab="", xlab="")
+axis(4, at=seq(0,1,0.2)) #specificity axis labels
+mtext("Specificity",side=4, col='red')
+
+#find where the lines intersect
+min.diff <-which.min(abs(unlist(performance(pred_n, "sens")@y.values) - unlist(performance(pred_n, "spec")@y.values)))
+min.x<-unlist(performance(pred_n, "sens")@x.values)[min.diff]
+min.y<-unlist(performance(pred_n, "spec")@y.values)[min.diff]
+optimal <-min.x #this is the optimal points to best trade off sensitivity and specificity
+
+abline(h = min.y, lty = 3)
+abline(v = min.x, lty = 3)
+text(min.x,0,paste("optimal threshold=",round(optimal,2)), pos = 4)
+```
+```{r}
+#predicting on best model with optimal threshold
+
+resp_log = predict(log4, newdata = test1, type = 'response')
+pred_log= ifelse(resp_log >= 0.22, "Yes","No")
+
+confusionMatrix(as.factor(pred_log), test1$RainTomorrow)
+```
+
+
+
+
+
+
+*******************************************************************************
+#Random Forest Models
+********************************************************************************
+
+
+
+```{r}
+library(randomForest)
+
+#original variables
+
+set.seed(55332)
+
+forest1 <- randomForest(RainTomorrow ~ .,
+                            data = train1, 
+                            importance = TRUE, 
+                            ntree = 1000)
+
+forest1
+```
+
+```{r}
+#variable importance
+varImpPlot(forest1)
+      
+```
+
+
+```{r}
+#graphing variable importance
+imp1 = as.data.frame(importance(forest1))
+imp1 = cbind(vars=rownames(imp1), imp1)
+imp1 = imp1[order(imp1$MeanDecreaseAccuracy),]
+imp1$vars = factor(imp1$vars, levels=unique(imp1$vars))
+
+
+imp1 %>% 
+  pivot_longer(cols=matches("Mean")) %>% 
+  ggplot(aes(value, vars)) +
+  geom_col(fill = "steelblue") +
+  geom_text(aes(label=round(value), x=0.5*value), size=3, colour="white") +
+  facet_grid(. ~ name, scales="free_x") +
+  scale_x_continuous(expand=expansion(c(0,0.04))) +
+  theme_minimal() +
+  theme(panel.grid.minor=element_blank(),
+        panel.grid.major=element_blank(),
+        axis.title=element_blank())
+```
+```{r}
+#predicting
+for_p1= predict(forest1, newdata = test1)
+
+confusionMatrix(as.factor(for_p1), test1$RainTomorrow)
+```
+
+```{r}
+set.seed(55332)
+
+#new features
+
+forest2 <- randomForest(RainTomorrow ~ .,
+                            data = train2, 
+                            importance = TRUE, 
+                            ntree = 1000)
+
+forest2
+```
+
+
+```{r}
+#variable importance
+varImpPlot(forest2)
+```
+
+```{r}
+#graphing variable importance
+imp2 = as.data.frame(importance(forest2))
+imp2 = cbind(vars=rownames(imp2), imp2)
+imp2 = imp2[order(imp2$MeanDecreaseAccuracy),]
+imp2$vars = factor(imp2$vars, levels=unique(imp2$vars))
+
+
+imp2 %>% 
+  pivot_longer(cols=matches("Mean")) %>% 
+  ggplot(aes(value, vars)) +
+  geom_col(fill = "steelblue") +
+  geom_text(aes(label=round(value), x=0.5*value), size=3, colour="white") +
+  facet_grid(. ~ name, scales="free_x") +
+  scale_x_continuous(expand=expansion(c(0,0.04))) +
+  theme_minimal() +
+  theme(panel.grid.minor=element_blank(),
+        panel.grid.major=element_blank(),
+        axis.title=element_blank())
+```
+```{r}
+#predicting
+for_p2= predict(forest2, newdata = test2)
+
+confusionMatrix(as.factor(for_p2), test2$RainTomorrow)
+```
+
+```{r}
+#creating parameters for tuning random forest
+mtry.values = seq(3, 6, 1)
+ntree.values = seq(800, 1000, 100)
+hyper_grid = expand.grid(mtry = mtry.values, ntree = ntree.values)
+```
+
+
+```{r}
+#create empty vector to store out of bag error values
+oob_err = c()
+```
+
+
+```{r}
+## Write a loop over the rows of hyper_grid to train the grid of models
+## Warning -- this loop takes a long time to run (close to an hour)
+## uncomment to run code
+
+#set.seed(41121)
+
+
+#for (i in 1:nrow(hyper_grid)) {
+
+  
+  #forest_opt = randomForest(RainTomorrow ~ ., data = train1, importance = F, mtry = hyper_grid$mtry[i], ntree = hyper_grid$ntree[i])
+  
+  
+  #oob_err[i] = forest_opt$err.rate[length(forest_opt$err.rate)]
+#}
+```
+
+
+
+```{r}
+## identifying best error rate (relies on above chunk)
+## uncomment to run code
+
+
+#opt_i = which.min(oob_err)
+#print(hyper_grid[opt_i,])
+```
+out-put of above is mtry = 4 and ntree = 800
+
+
+```{r}
+set.seed(55332)
+
+forest_opt <- randomForest(RainTomorrow ~ .,
+                            data = train1, 
+                            importance = TRUE,
+                            mtry = 4,
+                            ntree = 800)
+
+forest_opt
+```
+
+
+```{r}
+#variable importance
+varImpPlot(forest_opt)
+```
+
+```{r}
+#graphing variable importance
+imp3 = as.data.frame(importance(forest_opt))
+imp3 = cbind(vars=rownames(imp3), imp3)
+imp3 = imp3[order(imp3$MeanDecreaseAccuracy),]
+imp3$vars = factor(imp3$vars, levels=unique(imp3$vars))
+
+
+imp3 %>% 
+  pivot_longer(cols=matches("Mean")) %>% 
+  ggplot(aes(value, vars)) +
+  geom_col(fill = "steelblue") +
+  geom_text(aes(label=round(value), x=0.5*value), size=3, colour="white") +
+  facet_grid(. ~ name, scales="free_x") +
+  scale_x_continuous(expand=expansion(c(0,0.04))) +
+  theme_minimal() +
+  theme(panel.grid.minor=element_blank(),
+        panel.grid.major=element_blank(),
+        axis.title=element_blank())
+```
+
+
+```{r}
+#predicting
+for_popt= predict(forest_opt, newdata = test1)
+
+confusionMatrix(as.factor(for_popt), test1$RainTomorrow)
+```
+
+
+
+## Comparing model with full variables
+
+```{r}
+#splitting no_nulls into training and testing
+
+set.seed(90821)
+tr_index = sample (nrow(rain_no_nulls), 0.7*nrow(rain_no_nulls), replace = F)
+train4 = rain_no_nulls[tr_index,]
+test4 = rain_no_nulls[-tr_index,]
+
+
+dim(train4); dim(test4)
+
+```
+```{r}
+
+set.seed(55332)
+
+#no nulls - all variables
+
+forest5 <- randomForest(RainTomorrow ~ .,
+                            data = train4, 
+                            importance = TRUE, 
+                            ntree = 1000)
+
+forest5
+```
+
+
+```{r}
+#variable importance
+varImpPlot(forest5)
+```
+
+
+```{r}
+#graphing variable importance
+imp5 = as.data.frame(importance(forest5))
+imp5 = cbind(vars=rownames(imp5), imp5)
+imp5 = imp5[order(imp5$MeanDecreaseAccuracy),]
+imp5$vars = factor(imp5$vars, levels=unique(imp5$vars))
+
+
+imp5 %>% 
+  pivot_longer(cols=matches("Mean")) %>% 
+  ggplot(aes(value, vars)) +
+  geom_col(fill = "steelblue") +
+  geom_text(aes(label=round(value), x=0.5*value), size=3, colour="white") +
+  facet_grid(. ~ name, scales="free_x") +
+  scale_x_continuous(expand=expansion(c(0,0.04))) +
+  theme_minimal() +
+  theme(panel.grid.minor=element_blank(),
+        panel.grid.major=element_blank(),
+        axis.title=element_blank())
+```
+
+
+```{r}
+#predicting
+for_p5= predict(forest5, newdata = test4)
+
+confusionMatrix(as.factor(for_p5), test4$RainTomorrow)
+```
+
+
+
+
+
+
+# Warning - all gbm models through the caret package take a long time to run (over six hours for each)
+## Code that will purposefully create an error is included in the next chunk to stop a "run all chunks" before running the gradient boosting machines.
+
+```{r}
+print ("Run all interrupted by intentional error.  Run each chunk below separately")
+error1 <- error
+```
+
+****************************************************************************************
+#Gradient Boosting Machine
+****************************************************************************************
+
+```{r}
+tr_Control <- trainControl(method = "cv",
+                           number = 5)
+```
+
+```{r}
+set.seed(739)
+
+gbmGrid <-  expand.grid(interaction.depth = c(1, 5, 9), 
+                        n.trees = (1:10)*100, 
+                        shrinkage = 0.1,
+                        n.minobsinnode = 20)
+
+gbmFit1 <- train(RainTomorrow ~ ., data = train1, 
+                 method = "gbm", 
+                 verbose = FALSE, 
+                 preProcess = c('center', 'scale'),
+                 tuneGrid = gbmGrid)
+gbmFit1
+```
+
+
+best was n.trees = 800, interaction.depth = 9, shrinkage = 0.1, and n.minobsinnode = 20 with a cv accuracy of 0.8468390
+
+```{r}
+set.seed(739)
+
+
+gbmFit2 <- train(RainTomorrow ~ ., data = train2, 
+                 method = "gbm", 
+                 verbose = FALSE, 
+                 preProcess = c('center', 'scale'),
+                 tuneGrid = gbmGrid)
+gbmFit2
+```
+
+best was ntrees = 1000, interaction depth = 5 with a cv accuracy of 0.8473542
+
+
+```{r}
+#predicting
+gbm1= predict(gbmFit1, newdata = test1)
+
+confusionMatrix(as.factor(gbm1), test1$RainTomorrow)
+```
+Copied Output:
+Confusion Matrix and Statistics
+
+          Reference
+Prediction    No   Yes
+       No  30225  4496
+       Yes  1465  4265
+                                          
+               Accuracy : 0.8526          
+                 95% CI : (0.8491, 0.8561)
+    No Information Rate : 0.7834          
+    P-Value [Acc > NIR] : < 2.2e-16       
+                                          
+                  Kappa : 0.5036          
+                                          
+ Mcnemar's Test P-Value : < 2.2e-16       
+                                          
+            Sensitivity : 0.9538          
+            Specificity : 0.4868          
+         Pos Pred Value : 0.8705          
+         Neg Pred Value : 0.7443          
+             Prevalence : 0.7834          
+         Detection Rate : 0.7472          
+   Detection Prevalence : 0.8583          
+      Balanced Accuracy : 0.7203          
+                                          
+       'Positive' Class : No              
+                            
+
+```{r}
+#predicting
+gbm2= predict(gbmFit2, newdata = test2)
+
+confusionMatrix(as.factor(gbm2), test2$RainTomorrow)
+```
+
+Copied output: 
+Confusion Matrix and Statistics
+
+          Reference
+Prediction    No   Yes
+       No  30259  4523
+       Yes  1431  4238
+                                          
+               Accuracy : 0.8528          
+                 95% CI : (0.8493, 0.8562)
+    No Information Rate : 0.7834          
+    P-Value [Acc > NIR] : < 2.2e-16       
+                                          
+                  Kappa : 0.5028          
+                                          
+ Mcnemar's Test P-Value : < 2.2e-16       
+                                          
+            Sensitivity : 0.9548          
+            Specificity : 0.4837          
+         Pos Pred Value : 0.8700          
+         Neg Pred Value : 0.7476          
+             Prevalence : 0.7834          
+         Detection Rate : 0.7480          
+   Detection Prevalence : 0.8599          
+      Balanced Accuracy : 0.7193          
+                                          
+       'Positive' Class : No         
+
+
+
+
+
+
+
+
+
+
+
+
+
+
